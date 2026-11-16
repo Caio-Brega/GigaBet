@@ -44,8 +44,8 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const logout = () => {
-    ApiClient.setToken(null);
+  const logout = async () => {
+    await ApiClient.logout();
     setUser(null);
   };
 

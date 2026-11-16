@@ -1,33 +1,43 @@
-version: "3.8"
-
 services:
-  backend:
-    build:
-      context: .
-      target: dev
-    container_name: gigabet-backend
-    stdin_open: true   # Permite receber comandos no console (equivalente a -i)
-    tty: true          # Aloca terminal interativo (equivalente a -t)
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: gigabet
+      POSTGRES_PASSWORD: gigabet
+      POSTGRES_DB: gigabet
     ports:
-      - "8080:8080"    # API REST HTTP do GigaBet
+      - "5434:5432"
     volumes:
-      - .:/app         # Mapeia os arquivos locais para atualizar em tempo real
-      - m2_cache:/root/.m2 # Preserva as dependências baixadas do Maven
-    working_dir: /app
-    command: mvn compile exec:java
+      - gigabet-pg:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/02-test-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gigabet -d gigabet"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    environment:
+      GIGABET_ARMAZENAMENTO: postgres
+      JDBC_URL: jdbc:postgresql://postgres:5432/gigabet
+      JDBC_USER: gigabet
+      JDBC_PASSWORD: gigabet
+      CPF_CHAVE: gigabet-dev-cpf-chave
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   frontend:
-    image: node:20-alpine
-    container_name: gigabet-frontend
-    working_dir: /app
-    volumes:
-      - ./frontend:/app         # Mapeia código do frontend para hot reload
-      - /app/node_modules        # Evita sobrescrever node_modules do container
-    ports:
-      - "5173:5173"              # Interface Web (Vite + React)
+    build: ./frontend
     environment:
-      - WATCHPACK_POLLING=true  # Garante hot reload no Docker Desktop / WSL2
-    command: sh -c "npm install && npm run dev -- --host"
+      API_PROXY: http://api:8080
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
 
 volumes:
-  m2_cache:
+  gigabet-pg:

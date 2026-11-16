@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * Interface de console da implementacao parcial. Os dados ficam em memoria
- * e se perdem ao encerrar o processo.
+ * Menu de texto. Usa o mesmo armazenamento da API: Postgres, ou memoria
+ * se GIGABET_ARMAZENAMENTO=memoria.
  */
 public final class AplicacaoConsole {
     private static final ZoneId ZONA = ZoneId.of("America/Sao_Paulo");
@@ -46,7 +46,7 @@ public final class AplicacaoConsole {
     }
 
     public static void main(String[] args) {
-        Sistema sistema = Sistema.criar(Clock.systemUTC());
+        Sistema sistema = Sistema.abrir(Clock.systemUTC());
         System.out.println("Gestao de Apostas Esportivas (GigaBet)");
         System.out.println("Administrador inicial: " + AutenticacaoService.EMAIL_ADMIN
                 + " / " + AutenticacaoService.SENHA_ADMIN);

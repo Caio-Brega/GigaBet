@@ -17,9 +17,7 @@ import br.ufmg.dcc603.apostas.dominio.Apostador;
 import br.ufmg.dcc603.apostas.dominio.Desfecho;
 import br.ufmg.dcc603.apostas.dominio.Equipe;
 import br.ufmg.dcc603.apostas.dominio.Partida;
-import br.ufmg.dcc603.apostas.dominio.Perfil;
 import br.ufmg.dcc603.apostas.dominio.RegistroAuditoria;
-import br.ufmg.dcc603.apostas.dominio.TipoPrevisao;
 import br.ufmg.dcc603.apostas.dominio.Usuario;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -32,9 +30,7 @@ import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +55,7 @@ public final class ServidorHttp {
     }
 
     public static void main(String[] args) {
-        Sistema sistema = Sistema.criar(Clock.systemUTC());
+        Sistema sistema = Sistema.abrir(Clock.systemUTC());
         int porta = 8080;
         if (args.length > 0) {
             try {
@@ -91,23 +87,12 @@ public final class ServidorHttp {
 
     public void semearDadosIniciais() {
         try {
-            Sessao admin = sistema.autenticacao().autenticar(AutenticacaoService.EMAIL_ADMIN, AutenticacaoService.SENHA_ADMIN);
-            if (sistema.partidas().listarTodas(admin).isEmpty()) {
-                Instant agora = Instant.now();
-                sistema.partidas().cadastrarPartida(admin, "Flamengo", "Palmeiras", agora.plus(Duration.ofHours(24)));
-                sistema.partidas().cadastrarPartida(admin, "Corinthians", "São Paulo", agora.plus(Duration.ofHours(48)));
-                sistema.partidas().cadastrarPartida(admin, "Cruzeiro", "Atlético-MG", agora.plus(Duration.ofHours(72)));
-                sistema.partidas().cadastrarPartida(admin, "Grêmio", "Internacional", agora.plus(Duration.ofHours(96)));
-
-                // Criar historico prévio para alimentar Laplace
-                Partida h1 = sistema.partidas().cadastrarPartida(admin, "Flamengo", "Palmeiras", agora.minus(Duration.ofDays(10)));
-                sistema.partidas().registrarResultado(admin, h1.id(), 2, 1, 3);
-                Partida h2 = sistema.partidas().cadastrarPartida(admin, "Flamengo", "Palmeiras", agora.minus(Duration.ofDays(20)));
-                sistema.partidas().registrarResultado(admin, h2.id(), 1, 0, 4);
-                Partida h3 = sistema.partidas().cadastrarPartida(admin, "Flamengo", "Palmeiras", agora.minus(Duration.ofDays(30)));
-                sistema.partidas().registrarResultado(admin, h3.id(), 0, 2, 2);
-            }
-        } catch (Exception ignored) {}
+            Sessao admin = sistema.autenticacao().autenticar(
+                    AutenticacaoService.EMAIL_ADMIN, AutenticacaoService.SENHA_ADMIN);
+            sistema.partidas().semearDemonstracaoSeVazio(admin);
+        } catch (RuntimeException e) {
+            System.err.println("[GigaBet API] Falha ao semear dados: " + e.getMessage());
+        }
     }
 
     private class ApiHandler implements HttpHandler {
@@ -151,6 +136,10 @@ public final class ServidorHttp {
                     exigirSessao(sessao);
                     Usuario usuario = sistema.autenticacao().exigir(sessao);
                     responderJson(exchange, 200, jsonUsuario(usuario, sessao.token()));
+                } else if (path.equals("/api/auth/sessao") && method.equals("DELETE")) {
+                    exigirSessao(sessao);
+                    sistema.autenticacao().encerrar(sessao);
+                    responderJson(exchange, 200, "{\"sucesso\":true}");
                 } else if (path.equals("/api/auth/deposito") && method.equals("POST")) {
                     exigirSessao(sessao);
                     BigDecimal valor = new BigDecimal(json.getOrDefault("valor", "0.00"));
@@ -158,15 +147,7 @@ public final class ServidorHttp {
                     Apostador apostador = sistema.autenticacao().exigirApostador(sessao);
                     responderJson(exchange, 200, "{\"sucesso\":true,\"novoSaldo\":\"" + apostador.saldo() + "\"}");
                 } else if (path.equals("/api/partidas") && method.equals("GET")) {
-                    List<Partida> partidas;
-                    if (sessao != null && sessao.perfil() == Perfil.APOSTADOR) {
-                        partidas = sistema.partidas().listarDisponiveis(sessao);
-                    } else if (sessao != null && sessao.perfil() == Perfil.ADMINISTRADOR) {
-                        partidas = sistema.partidas().listarTodas(sessao);
-                    } else {
-                        // Público (listar partidas agendadas)
-                        partidas = new ArrayList<>(sistema.estado().partidas().values());
-                    }
+                    List<Partida> partidas = sistema.partidas().listarCatalogo();
                     responderJson(exchange, 200, jsonListaPartidas(partidas));
                 } else if (path.equals("/api/partidas") && method.equals("POST")) {
                     exigirSessao(sessao);
@@ -185,7 +166,7 @@ public final class ServidorHttp {
                     responderJson(exchange, 200, "{\"sucesso\":true,\"apostasApuradas\":" + resumo.apostasApuradas()
                             + ",\"vencedoras\":" + resumo.vencedoras() + ",\"perdedoras\":" + resumo.perdedoras() + "}");
                 } else if (path.equals("/api/equipes") && method.equals("GET")) {
-                    List<Equipe> equipes = new ArrayList<>(sistema.estado().equipes().values());
+                    List<Equipe> equipes = sistema.partidas().listarEquipes();
                     responderJson(exchange, 200, jsonListaEquipes(equipes));
                 } else if (path.equals("/api/equipes") && method.equals("POST")) {
                     exigirSessao(sessao);
@@ -245,17 +226,7 @@ public final class ServidorHttp {
     private Sessao extrairSessao(HttpExchange exchange) {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
         if (auth != null && auth.startsWith("Bearer ")) {
-            String token = auth.substring(7).trim();
-            try {
-                // Procurar sessão correspondente
-                for (Usuario u : sistema.estado().usuarios().values()) {
-                    Sessao s = new Sessao(token, u.id(), u.perfil());
-                    try {
-                        sistema.autenticacao().exigir(s);
-                        return s;
-                    } catch (Exception ignored) {}
-                }
-            } catch (Exception ignored) {}
+            return sistema.autenticacao().localizar(auth.substring(7).trim());
         }
         return null;
     }

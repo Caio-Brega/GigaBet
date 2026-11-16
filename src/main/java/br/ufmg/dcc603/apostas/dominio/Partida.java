@@ -82,6 +82,11 @@ public final class Partida {
         this.status = StatusPartida.ENCERRADA;
     }
 
+    public void restaurar(StatusPartida status, ResultadoPartida resultado) {
+        this.status = Objects.requireNonNull(status);
+        this.resultado = resultado;
+    }
+
     public Partida copiar() {
         return new Partida(this);
     }

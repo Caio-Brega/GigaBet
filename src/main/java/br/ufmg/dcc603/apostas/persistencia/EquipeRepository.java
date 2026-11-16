@@ -2,6 +2,7 @@ package br.ufmg.dcc603.apostas.persistencia;
 
 import br.ufmg.dcc603.apostas.dominio.Equipe;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface EquipeRepository {
@@ -10,4 +11,6 @@ public interface EquipeRepository {
     Optional<Equipe> buscarPorId(long id);
 
     Optional<Equipe> buscarPorNome(String nome);
+
+    List<Equipe> listar();
 }

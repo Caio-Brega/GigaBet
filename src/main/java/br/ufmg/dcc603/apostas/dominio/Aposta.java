@@ -93,6 +93,10 @@ public abstract class Aposta {
         status = StatusAposta.PERDEDORA;
     }
 
+    public void restaurarStatus(StatusAposta status) {
+        this.status = Objects.requireNonNull(status);
+    }
+
     private void exigirAberta() {
         if (status != StatusAposta.ABERTA) {
             throw new IllegalStateException("Aposta ja apurada");

@@ -10,8 +10,11 @@ import br.ufmg.dcc603.apostas.persistencia.EquipeRepository;
 import br.ufmg.dcc603.apostas.persistencia.PartidaRepository;
 import br.ufmg.dcc603.apostas.persistencia.UnidadeDeTrabalho;
 
+import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 
 public final class PartidaService {
@@ -81,6 +84,46 @@ public final class PartidaService {
         }
     }
 
+    public List<Partida> listarCatalogo() {
+        sincronizarStatus();
+        return partidas.listar();
+    }
+
+    public List<Equipe> listarEquipes() {
+        return equipes.listar().stream()
+                .sorted(Comparator.comparing(Equipe::nome, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    public void semearDemonstracaoSeVazio(Sessao admin) {
+        autenticacao.exigirAdministrador(admin);
+        if (!partidas.listar().isEmpty()) {
+            return;
+        }
+        unidade.executar(() -> {
+            if (!partidas.listar().isEmpty()) {
+                return null;
+            }
+            autenticacao.cadastrar(new PedidoCadastro(
+                    "Carlos Apostador", "39053344705", "carlos@email.com", "senha123", true));
+            Sessao carlos = autenticacao.autenticar("carlos@email.com", "senha123");
+            autenticacao.depositar(carlos, new BigDecimal("150.00"));
+            Instant agora = relogio.instant();
+            int[][] placares = {{2, 1}, {1, 0}, {3, 0}, {2, 0}, {0, 1}, {0, 2}, {1, 1}, {2, 2}};
+            int[] cartoes = {3, 2, 5, 1, 4, 3, 2, 4};
+            for (int i = 0; i < placares.length; i++) {
+                gravarEncerrada("Flamengo", "Palmeiras", agora.minus(Duration.ofDays(10L * (i + 1))),
+                        placares[i][0], placares[i][1], cartoes[i]);
+            }
+            gravarEmAndamento("Santos", "Vasco", agora.minus(Duration.ofHours(2)));
+            cadastrarPartida(admin, "Flamengo", "Palmeiras", agora.plus(Duration.ofHours(24)));
+            cadastrarPartida(admin, "Corinthians", "São Paulo", agora.plus(Duration.ofHours(48)));
+            cadastrarPartida(admin, "Cruzeiro", "Atlético-MG", agora.plus(Duration.ofHours(72)));
+            cadastrarPartida(admin, "Grêmio", "Internacional", agora.plus(Duration.ofHours(96)));
+            return null;
+        });
+    }
+
     public List<Partida> listarDisponiveis(Sessao sessao) {
         autenticacao.exigirApostador(sessao);
         sincronizarStatus();
@@ -133,6 +176,27 @@ public final class PartidaService {
     public Partida buscar(long partidaId) {
         return partidas.buscarPorId(partidaId)
                 .orElseThrow(() -> new RegraNegocioException(CodigoRegra.PARTIDA_NAO_ENCONTRADA));
+    }
+
+    private void gravarEncerrada(
+            String nomeMandante, String nomeVisitante, Instant inicio, int golsMandante, int golsVisitante, int cartoes) {
+        Partida partida = novaPartida(nomeMandante, nomeVisitante, inicio);
+        partida.encerrar(new ResultadoPartida(golsMandante, golsVisitante, cartoes));
+        partidas.salvar(partida);
+    }
+
+    private void gravarEmAndamento(String nomeMandante, String nomeVisitante, Instant inicio) {
+        Partida partida = novaPartida(nomeMandante, nomeVisitante, inicio);
+        partida.marcarEmAndamentoSeIniciou(inicio.plusSeconds(60));
+        partidas.salvar(partida);
+    }
+
+    private Partida novaPartida(String nomeMandante, String nomeVisitante, Instant inicio) {
+        Equipe casa = obterOuCriar(nomeMandante);
+        Equipe fora = obterOuCriar(nomeVisitante);
+        Partida partida = new Partida(unidade.proximoId(), casa, fora, inicio);
+        partidas.salvar(partida);
+        return partida;
     }
 
     private Equipe obterOuCriar(String nome) {

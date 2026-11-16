@@ -3,6 +3,8 @@ package br.ufmg.dcc603.apostas.persistencia.memoria;
 import br.ufmg.dcc603.apostas.dominio.Equipe;
 import br.ufmg.dcc603.apostas.persistencia.EquipeRepository;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public final class EquipeRepositoryMemoria implements EquipeRepository {
@@ -27,5 +29,10 @@ public final class EquipeRepositoryMemoria implements EquipeRepository {
         return estado.equipes().values().stream()
                 .filter(equipe -> equipe.nome().equalsIgnoreCase(nome.trim()))
                 .findFirst();
+    }
+
+    @Override
+    public List<Equipe> listar() {
+        return new ArrayList<>(estado.equipes().values());
     }
 }

@@ -81,4 +81,9 @@ public abstract class Usuario {
             bloqueadaAte = null;
         }
     }
+
+    public void restaurarAcesso(int tentativasFalhas, Instant bloqueadaAte) {
+        this.tentativasFalhas = tentativasFalhas;
+        this.bloqueadaAte = bloqueadaAte;
+    }
 }

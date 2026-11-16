@@ -1,6 +1,7 @@
 package br.ufmg.dcc603.apostas.dominio;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 public final class Apostador extends Usuario {
     private final String cpf;
@@ -42,6 +43,10 @@ public final class Apostador extends Usuario {
             throw new IllegalStateException("Saldo insuficiente para debito");
         }
         saldo = saldo.subtract(valor);
+    }
+
+    public void restaurarSaldo(BigDecimal saldo) {
+        this.saldo = Objects.requireNonNull(saldo);
     }
 
     @Override

@@ -4,14 +4,13 @@ import br.ufmg.dcc603.apostas.dominio.Administrador;
 import br.ufmg.dcc603.apostas.dominio.Apostador;
 import br.ufmg.dcc603.apostas.dominio.TipoEventoAuditoria;
 import br.ufmg.dcc603.apostas.dominio.Usuario;
+import br.ufmg.dcc603.apostas.persistencia.SessaoRepository;
 import br.ufmg.dcc603.apostas.persistencia.UnidadeDeTrabalho;
 import br.ufmg.dcc603.apostas.persistencia.UsuarioRepository;
 
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 
 public final class AutenticacaoService {
@@ -22,19 +21,21 @@ public final class AutenticacaoService {
     private final UnidadeDeTrabalho unidade;
     private final SenhaHasher hasher;
     private final AuditoriaService auditoria;
+    private final SessaoRepository sessoes;
     private final Clock relogio;
-    private final Map<String, Sessao> sessoes = new HashMap<>();
 
     public AutenticacaoService(
             UsuarioRepository usuarios,
             UnidadeDeTrabalho unidade,
             SenhaHasher hasher,
             AuditoriaService auditoria,
+            SessaoRepository sessoes,
             Clock relogio) {
         this.usuarios = usuarios;
         this.unidade = unidade;
         this.hasher = hasher;
         this.auditoria = auditoria;
+        this.sessoes = sessoes;
         this.relogio = relogio;
     }
 
@@ -92,8 +93,21 @@ public final class AutenticacaoService {
         usuario.registrarSucesso();
         usuarios.salvar(usuario);
         Sessao sessao = new Sessao(UUID.randomUUID().toString(), usuario.id(), usuario.perfil());
-        sessoes.put(sessao.token(), sessao);
+        sessoes.salvar(sessao);
         return sessao;
+    }
+
+    public Sessao localizar(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        return sessoes.buscar(token.trim()).orElse(null);
+    }
+
+    public void encerrar(Sessao sessao) {
+        if (sessao != null) {
+            sessoes.remover(sessao.token());
+        }
     }
 
     public void depositar(Sessao sessao, BigDecimal valor) {
@@ -106,10 +120,11 @@ public final class AutenticacaoService {
     }
 
     public Usuario exigir(Sessao sessao) {
-        if (sessao == null || !sessoes.containsKey(sessao.token())) {
+        Sessao armazenada = sessao == null ? null : sessoes.buscar(sessao.token()).orElse(null);
+        if (armazenada == null || armazenada.usuarioId() != sessao.usuarioId()) {
             throw new RegraNegocioException(CodigoRegra.SESSAO_INVALIDA);
         }
-        return usuarios.buscarPorId(sessao.usuarioId())
+        return usuarios.buscarPorId(armazenada.usuarioId())
                 .orElseThrow(() -> new RegraNegocioException(CodigoRegra.SESSAO_INVALIDA));
     }
 
