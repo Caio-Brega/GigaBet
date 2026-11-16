@@ -16,39 +16,41 @@ O código segue o que o grupo fechou nas Sprints 1 e 2: cadastro e autenticaçã
 
 ## O que esta entrega não faz
 
-Não há interface web, banco relacional, TLS, criptografia de CPF em repouso nem BCrypt. A Sprint 2 deixa essas trocas para trás das mesmas interfaces (`SenhaHasher` e repositórios).
+Não há banco relacional, TLS, criptografia de CPF em repouso nem BCrypt. A Sprint 2 deixa essas trocas para trás das mesmas interfaces (`SenhaHasher` e repositórios).
 
 O histórico entre duas equipes conta o desfecho pelo papel naquela partida (mandante, visitante ou placar da casa), inclusive quando o mando de campo inverte. É a leitura da seção 4.3: “em 8 confrontos, o mandante venceu 4”.
 
-## Como rodar
+## Interface Web (Frontend) e Backend
 
-### Opção 1: Diretamente na máquina
-Requisito: JDK 17 ou superior e Maven.
+O projeto conta agora com um **Frontend completo e responsivo** construído em React, Vite e Tailwind CSS, integrado à API REST HTTP do backend Java (`ServidorHttp`).
 
+### Como rodar o Frontend e Backend
+
+#### Opção A: Executar via Docker Compose (Recomendado)
+Para iniciar simultaneamente o backend Java (porta 8080) e o frontend web (porta 5173):
+
+```bash
+docker compose up
+```
+
+Acesse a interface no navegador: **`http://localhost:5173`**.
+
+#### Opção B: Diretamente na máquina
+
+1. **Iniciar o Backend Java (API REST + Console na porta 8080):**
 ```bash
 mvn test
 mvn -q exec:java
 ```
 
-`mvn test` executa a suíte JUnit 5. `mvn -q exec:java` abre o console.
-
-### Opção 2: Com Docker Desktop (atualizações em tempo real)
-
-Para rodar com Docker e manter as alterações de código sincronizadas em tempo real via volume:
-
+2. **Iniciar o Frontend Web (porta 5173):**
+Em outro terminal:
 ```bash
-# Executar o console interativo com recarregamento de alterações
-docker compose run --rm backend
+cd frontend
+npm install
+npm run dev
 ```
-
-Ou, caso deseje construir e rodar a imagem manualmente:
-```bash
-# Build da imagem de desenvolvimento
-docker build --target dev -t gigabet-dev .
-
-# Execução interativa mapeando o diretório atual
-docker run -it --rm -v $(pwd):/app -v m2_cache:/root/.m2 gigabet-dev
-```
+Acesse **`http://localhost:5173`**.
 
 Administrador inicial, criado na subida:
 

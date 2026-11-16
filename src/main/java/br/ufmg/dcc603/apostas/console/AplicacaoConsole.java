@@ -47,9 +47,11 @@ public final class AplicacaoConsole {
 
     public static void main(String[] args) {
         Sistema sistema = Sistema.criar(Clock.systemUTC());
-        System.out.println("Gestao de Apostas Esportivas (implementacao parcial)");
+        System.out.println("Gestao de Apostas Esportivas (GigaBet)");
         System.out.println("Administrador inicial: " + AutenticacaoService.EMAIL_ADMIN
                 + " / " + AutenticacaoService.SENHA_ADMIN);
+        br.ufmg.dcc603.apostas.web.ServidorHttp servidor = br.ufmg.dcc603.apostas.web.ServidorHttp.iniciar(sistema, 8080);
+        servidor.semearDadosIniciais();
         new AplicacaoConsole(sistema, new Scanner(System.in)).executar();
     }
 
