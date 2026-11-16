@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      target: dev
+    container_name: gigabet-backend
+    stdin_open: true   # Permite receber comandos no console (equivalente a -i)
+    tty: true          # Aloca terminal interativo (equivalente a -t)
+    volumes:
+      - .:/app         # Mapeia os arquivos locais para atualizar em tempo real
+      - m2_cache:/root/.m2 # Preserva as dependências baixadas do Maven
+    working_dir: /app
+    command: mvn compile exec:java
+
+  # -------------------------------------------------------------------------
+  # SERVIÇO DE FRONTEND (Preparado para quando você adicionar um frontend web):
+  # Descomente as linhas abaixo caso adicione uma pasta 'frontend' (ex: React, Vite, Vue):
+  # -------------------------------------------------------------------------
+  # frontend:
+  #   image: node:20-alpine
+  #   container_name: gigabet-frontend
+  #   working_dir: /app
+  #   volumes:
+  #     - ./frontend:/app         # Mapeia código do frontend para hot reload
+  #     - /app/node_modules        # Evita sobrescrever node_modules do container
+  #   ports:
+  #     - "5173:5173"              # Porta padrão do Vite (ou 3000 para React/Next)
+  #   environment:
+  #     - WATCHPACK_POLLING=true  # Garante hot reload no Docker Desktop / WSL2
+  #   command: sh -c "npm install && npm run dev -- --host"
+
+volumes:
+  m2_cache:

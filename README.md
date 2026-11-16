@@ -22,6 +22,7 @@ O histórico entre duas equipes conta o desfecho pelo papel naquela partida (man
 
 ## Como rodar
 
+### Opção 1: Diretamente na máquina
 Requisito: JDK 17 ou superior e Maven.
 
 ```bash
@@ -30,6 +31,24 @@ mvn -q exec:java
 ```
 
 `mvn test` executa a suíte JUnit 5. `mvn -q exec:java` abre o console.
+
+### Opção 2: Com Docker Desktop (atualizações em tempo real)
+
+Para rodar com Docker e manter as alterações de código sincronizadas em tempo real via volume:
+
+```bash
+# Executar o console interativo com recarregamento de alterações
+docker compose run --rm backend
+```
+
+Ou, caso deseje construir e rodar a imagem manualmente:
+```bash
+# Build da imagem de desenvolvimento
+docker build --target dev -t gigabet-dev .
+
+# Execução interativa mapeando o diretório atual
+docker run -it --rm -v $(pwd):/app -v m2_cache:/root/.m2 gigabet-dev
+```
 
 Administrador inicial, criado na subida:
 
