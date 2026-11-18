@@ -1,9 +1,9 @@
 package br.ufmg.dcc603.apostas.aplicacao;
 
 import br.ufmg.dcc603.apostas.dominio.Partida;
-import br.ufmg.dcc603.apostas.dominio.StatusPartida;
 import br.ufmg.dcc603.apostas.dominio.TipoPrevisao;
 
+import java.math.BigDecimal;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -29,12 +29,7 @@ public final class CalculadoraProbabilidade {
         if (estrategia == null) {
             throw new RegraNegocioException(CodigoRegra.PREVISAO_INVALIDA);
         }
-        List<Partida> historico = partidas.stream()
-                .filter(partida -> partida.status() == StatusPartida.ENCERRADA)
-                .filter(partida -> partida.resultado() != null)
-                .filter(partida -> partida.id() != atual.id())
-                .filter(atual::mesmasEquipes)
-                .toList();
-        return new Estimativa(estrategia.contar(pedido, historico), historico.size(), estrategia.espaco());
+        BigDecimal p = estrategia.calcularProbabilidade(atual, pedido, partidas);
+        return new Estimativa(p, pedido.tipo(), estrategia.espaco());
     }
 }

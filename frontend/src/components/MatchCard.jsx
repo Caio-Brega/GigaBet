@@ -105,7 +105,7 @@ export default function MatchCard({ partida, onOpenBet, onOpenResult }) {
             className="flex-1 py-2.5 px-4 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/30 hover:border-emerald-500 font-bold text-xs rounded-xl shadow-sm hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
           >
             <Flame className="w-4 h-4" />
-            <span>Fazer Aposta (Laplace)</span>
+            <span>Fazer Aposta</span>
           </button>
         )}
 

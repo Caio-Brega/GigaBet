@@ -146,7 +146,7 @@ export default function BetModal({ partida, isOpen, onClose, onBetPlaced }) {
                 Cupom de Aposta
               </span>
               <h3 className="text-xl font-extrabold text-white mt-1.5">{partida.descricao}</h3>
-              <p className="text-xs text-slate-400">Escolha uma previsão e confira as odds de Laplace.</p>
+              <p className="text-xs text-slate-400">Escolha uma previsão e confira as odds calculadas via Poisson.</p>
             </div>
 
             {/* SELEÇÃO DO TIPO DE PREVISÃO */}
@@ -332,12 +332,12 @@ export default function BetModal({ partida, isOpen, onClose, onBetPlaced }) {
               </div>
             </div>
 
-            {/* COTAÇÃO CALCULADA (LAPLACE) */}
+            {/* COTAÇÃO CALCULADA (POISSON) */}
             <div className="bg-gradient-to-br from-emerald-950/30 to-slate-950 border border-emerald-500/20 rounded-2xl p-4 mb-5">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-400 flex items-center gap-1">
-                    <Calculator className="w-3 h-3" /> Cotação de Laplace
+                    <Calculator className="w-3 h-3" /> Cotação Estimada (Poisson)
                   </span>
                   <p className="text-xs text-slate-400 mt-0.5">
                     Probabilidade: {cotacao?.probabilidade ? (parseFloat(cotacao.probabilidade) * 100).toFixed(1) + '%' : 'Calculando...'}

@@ -140,7 +140,7 @@ export default function HistoryView() {
                     </span>
                     <span className="text-emerald-400 font-bold">{a.previsao}</span>
                     <span className="text-slate-500">|</span>
-                    <span className="text-slate-400">Prob. Laplace: {(parseFloat(a.probabilidade || 0) * 100).toFixed(1)}%</span>
+                    <span className="text-slate-400">Prob. Poisson: {(parseFloat(a.probabilidade || 0) * 100).toFixed(1)}%</span>
                   </div>
                 </div>
 
