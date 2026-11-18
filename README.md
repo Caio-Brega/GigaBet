@@ -70,6 +70,17 @@ Administrador inicial, criado na subida:
 - e-mail: `admin@apostas.local`
 - senha: `admin123`
 
+### Sincronização ESPN
+
+A API consulta a ESPN ao iniciar o servidor e depois a cada hora. Como o endpoint do Brasileirão rejeita intervalos
+`dates=início-fim`, as consultas são feitas uma data por requisição e os eventos são consolidados por ID. O mural atualiza
+as partidas a cada minuto. A carga de partidas fictícias de demonstração fica desativada por padrão; para ativá-la
+explicitamente em ambiente de desenvolvimento, configure `GIGABET_SEED_DEMO=true`.
+
+Os dados já gravados no volume do Postgres não são apagados pela sincronização nem ao atualizar a aplicação. Para zerar
+uma instalação local de desenvolvimento, `docker compose down -v` remove o banco inteiro (incluindo contas e apostas),
+e `docker compose up --build` cria um banco novo.
+
 O apostador começa com saldo zero. Use a opção de depósito simulado antes de apostar. Datas no console são no fuso de São Paulo, no formato `dd/MM/yyyy HH:mm`.
 
 ## Onde está cada parte

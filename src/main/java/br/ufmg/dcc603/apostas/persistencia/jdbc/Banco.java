@@ -55,6 +55,8 @@ public final class Banco implements UnidadeDeTrabalho {
                 cartoes_amarelos INTEGER
             )
             """,
+            "ALTER TABLE partidas ADD COLUMN IF NOT EXISTS external_id TEXT",
+            "CREATE UNIQUE INDEX IF NOT EXISTS partidas_external_id_unico ON partidas (external_id) WHERE external_id IS NOT NULL",
             """
             CREATE TABLE IF NOT EXISTS apostas (
                 id BIGINT PRIMARY KEY,

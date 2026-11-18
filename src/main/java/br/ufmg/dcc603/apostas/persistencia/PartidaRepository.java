@@ -10,5 +10,7 @@ public interface PartidaRepository {
 
     Optional<Partida> buscarPorId(long id);
 
+    Optional<Partida> buscarPorExternalId(String externalId);
+
     List<Partida> listar();
 }

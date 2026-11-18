@@ -7,5 +7,6 @@ public enum TipoEventoAuditoria {
     DEPOSITO_SIMULADO,
     REGISTRO_APOSTA,
     REGISTRO_RESULTADO,
-    APURACAO
+    APURACAO,
+    SINCRONIZACAO_ESPN
 }

@@ -21,17 +21,19 @@ function MainContent() {
 
   useEffect(() => {
     carregarPartidas();
+    const atualizador = setInterval(() => carregarPartidas(false), 60_000);
+    return () => clearInterval(atualizador);
   }, []);
 
-  const carregarPartidas = async () => {
-    setLoading(true);
+  const carregarPartidas = async (mostrarLoading = true) => {
+    if (mostrarLoading) setLoading(true);
     try {
       const data = await ApiClient.listarPartidas();
       setPartidas(data || []);
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (mostrarLoading) setLoading(false);
     }
   };
 
@@ -66,8 +68,9 @@ function MainContent() {
                   </h1>
 
                   <p className="mt-4 text-sm sm:text-base text-slate-400 leading-relaxed">
-                    Motor de cálculo com suavização de Laplace <code className="text-emerald-400 font-mono">p = (n + 1)/(N + K)</code>,
-                    prêmio proporcional com odds mínimas de 1.01, integridade transacional na apuração e controle rigoroso de apostas.
+                    Motor de cálculo com Distribuição de Poisson, histórico geral recente e médias globais da liga como prior,
+                    prêmio proporcional com gestão de risco (piso de 1.01, tetos de odds por mercado e teto máximo de pagamento),
+                    integridade transacional na apuração e controle rigoroso de apostas.
                   </p>
 
                   {/* Highlights Grid */}
@@ -78,8 +81,8 @@ function MainContent() {
                     </div>
 
                     <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3">
-                      <span className="text-[10px] uppercase font-bold text-slate-400">Suavização de Laplace</span>
-                      <p className="text-xs font-bold text-emerald-400 mt-0.5">Sem odds zero</p>
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Distribuição de Poisson</span>
+                      <p className="text-xs font-bold text-emerald-400 mt-0.5">Odds realistas e calibradas</p>
                     </div>
 
                     <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3">
@@ -180,7 +183,7 @@ function MainContent() {
             DCC603: Engenharia de Software — Universidade Federal de Minas Gerais (UFMG) • Grupo 8
           </p>
           <p className="text-[10px] text-slate-500">
-            Regras implementadas: UC01 a UC13, RN01 a RN08, Laplace Smoothing, Transações Atômicas de Apuração.
+            Regras implementadas: UC01 a UC13, RN01 a RN08, Distribuição de Poisson, Gestão de Risco com Tetos e Transações Atômicas de Apuração.
           </p>
         </div>
       </footer>

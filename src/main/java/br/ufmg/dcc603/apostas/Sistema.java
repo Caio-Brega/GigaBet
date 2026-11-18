@@ -12,6 +12,8 @@ import br.ufmg.dcc603.apostas.aplicacao.RelatorioService;
 import br.ufmg.dcc603.apostas.aplicacao.SenhaHasher;
 import br.ufmg.dcc603.apostas.aplicacao.SenhaHasherBcrypt;
 import br.ufmg.dcc603.apostas.aplicacao.SenhaHasherSha256;
+import br.ufmg.dcc603.apostas.aplicacao.SincronizacaoEspnService;
+import br.ufmg.dcc603.apostas.integracao.espn.EspnBrasileiraoClient;
 import br.ufmg.dcc603.apostas.persistencia.ApostaRepository;
 import br.ufmg.dcc603.apostas.persistencia.AuditoriaRepository;
 import br.ufmg.dcc603.apostas.persistencia.EquipeRepository;
@@ -43,26 +45,42 @@ public final class Sistema {
     private final ApostaService apostas;
     private final RelatorioService relatorios;
     private final AuditoriaService auditoria;
+    private final SincronizacaoEspnService sincronizacaoEspn;
 
     private Sistema(
             AutenticacaoService autenticacao,
             PartidaService partidas,
             ApostaService apostas,
             RelatorioService relatorios,
-            AuditoriaService auditoria) {
+            AuditoriaService auditoria,
+            SincronizacaoEspnService sincronizacaoEspn) {
         this.autenticacao = autenticacao;
         this.partidas = partidas;
         this.apostas = apostas;
         this.relatorios = relatorios;
         this.auditoria = auditoria;
+        this.sincronizacaoEspn = sincronizacaoEspn;
     }
 
     public static Sistema criar(Clock relogio) {
+        return criar(relogio, new EspnBrasileiraoClient());
+    }
+
+    public static Sistema criar(Clock relogio, EspnBrasileiraoClient espnClient) {
         EstadoMemoria estado = new EstadoMemoria();
-        return criar(relogio, estado, new ApostaRepositoryMemoria(estado), new SenhaHasherSha256());
+        return criar(relogio, estado, new ApostaRepositoryMemoria(estado), new SenhaHasherSha256(), espnClient);
     }
 
     public static Sistema criar(Clock relogio, EstadoMemoria estado, ApostaRepository apostas, SenhaHasher hasher) {
+        return criar(relogio, estado, apostas, hasher, new EspnBrasileiraoClient());
+    }
+
+    public static Sistema criar(
+            Clock relogio,
+            EstadoMemoria estado,
+            ApostaRepository apostas,
+            SenhaHasher hasher,
+            EspnBrasileiraoClient espnClient) {
         return montar(
                 relogio,
                 estado,
@@ -72,7 +90,8 @@ public final class Sistema {
                 new PartidaRepositoryMemoria(estado),
                 new EquipeRepositoryMemoria(estado),
                 new AuditoriaRepositoryMemoria(estado),
-                new SessaoRepositoryMemoria());
+                new SessaoRepositoryMemoria(),
+                espnClient);
     }
 
     public static Sistema abrir(Clock relogio) {
@@ -114,6 +133,20 @@ public final class Sistema {
             EquipeRepository equipes,
             AuditoriaRepository auditoriaRepositorio,
             SessaoRepository sessoes) {
+        return montar(relogio, unidade, apostas, hasher, usuarios, partidas, equipes, auditoriaRepositorio, sessoes, new EspnBrasileiraoClient());
+    }
+
+    private static Sistema montar(
+            Clock relogio,
+            UnidadeDeTrabalho unidade,
+            ApostaRepository apostas,
+            SenhaHasher hasher,
+            UsuarioRepository usuarios,
+            PartidaRepository partidas,
+            EquipeRepository equipes,
+            AuditoriaRepository auditoriaRepositorio,
+            SessaoRepository sessoes,
+            EspnBrasileiraoClient espnClient) {
         AuditoriaService auditoria = new AuditoriaService(auditoriaRepositorio, unidade, relogio);
         AutenticacaoService autenticacao = new AutenticacaoService(
                 usuarios, unidade, hasher, auditoria, sessoes, relogio);
@@ -126,8 +159,10 @@ public final class Sistema {
                 apostas, partidas, usuarios, unidade, autenticacao, partidaService,
                 probabilidade, premio, auditoria, relogio);
         RelatorioService relatorios = new RelatorioService(autenticacao, apostas, partidas, usuarios);
+        SincronizacaoEspnService sincronizacaoEspn = new SincronizacaoEspnService(
+                espnClient, equipes, partidas, unidade, autenticacao, apuracao, auditoria, relogio);
         autenticacao.semearAdministrador();
-        return new Sistema(autenticacao, partidaService, apostaService, relatorios, auditoria);
+        return new Sistema(autenticacao, partidaService, apostaService, relatorios, auditoria, sincronizacaoEspn);
     }
 
     public AutenticacaoService autenticacao() {
@@ -148,5 +183,9 @@ public final class Sistema {
 
     public AuditoriaService auditoria() {
         return auditoria;
+    }
+
+    public SincronizacaoEspnService sincronizacaoEspn() {
+        return sincronizacaoEspn;
     }
 }

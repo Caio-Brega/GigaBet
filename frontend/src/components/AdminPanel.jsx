@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ApiClient } from '../api';
 import { 
   LayoutDashboard, PlusCircle, CheckCircle, BarChart3, 
-  Users, ShieldAlert, AlertCircle, FileText, Calendar, Shield 
+  Users, ShieldAlert, AlertCircle, FileText, Calendar, Shield,
+  RefreshCw, DownloadCloud, Radio
 } from 'lucide-react';
 
 export default function AdminPanel({ onMatchesUpdated }) {
@@ -104,6 +105,56 @@ export default function AdminPanel({ onMatchesUpdated }) {
       setMensagem({ tipo: 'erro', texto: err.message });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [syncLoading, setSyncLoading] = useState(false);
+
+  const handleSincronizarProximosJogos = async () => {
+    setSyncLoading(true);
+    setMensagem({ tipo: '', texto: '' });
+    try {
+      const res = await ApiClient.sincronizarProximosJogos();
+      setMensagem({ tipo: res.sucesso ? 'sucesso' : 'erro', texto: res.mensagem });
+      await carregarTudo();
+      if (onMatchesUpdated) onMatchesUpdated();
+    } catch (err) {
+      setMensagem({ tipo: 'erro', texto: err.message });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const handleSincronizarHistorico = async () => {
+    setSyncLoading(true);
+    setMensagem({ tipo: '', texto: '' });
+    try {
+      const res = await ApiClient.sincronizarHistorico();
+      setMensagem({ tipo: res.sucesso ? 'sucesso' : 'erro', texto: res.mensagem });
+      await carregarTudo();
+      if (onMatchesUpdated) onMatchesUpdated();
+    } catch (err) {
+      setMensagem({ tipo: 'erro', texto: err.message });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const handleSincronizarTudo = async () => {
+    setSyncLoading(true);
+    setMensagem({ tipo: '', texto: '' });
+    try {
+      const res = await ApiClient.sincronizarTudo();
+      setMensagem({
+        tipo: 'sucesso',
+        texto: `Sincronização ESPN concluída! Próximas: +${res.agendadas?.partidasCriadas || 0} (${res.agendadas?.partidasJaExistentes || 0} existentes). Histórico: ${res.historico?.partidasApuradas || 0} apuradas (+${res.historico?.partidasHistoricoCriadas || 0} para Poisson).`
+      });
+      await carregarTudo();
+      if (onMatchesUpdated) onMatchesUpdated();
+    } catch (err) {
+      setMensagem({ tipo: 'erro', texto: err.message });
+    } finally {
+      setSyncLoading(false);
     }
   };
 
@@ -212,6 +263,59 @@ export default function AdminPanel({ onMatchesUpdated }) {
       {/* TAB 1: PARTIDAS & APURAÇÃO */}
       {subTab === 'partidas' && (
         <div className="space-y-6">
+          {/* Card: Integração ESPN Brasileirão Série A */}
+          <div className="bg-gradient-to-r from-blue-950/40 via-slate-900 to-slate-900 border border-blue-500/30 rounded-3xl p-6 shadow-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse"></span>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Radio className="w-5 h-5 text-blue-400" />
+                    Integração Automática ESPN (Brasileirão Série A)
+                  </h3>
+                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    bra.1
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 max-w-2xl">
+                  Sincronização com a API pública da ESPN. Cadastra equipes automaticamente, importa próximos jogos para abertura de apostas, extrai estatísticas reais (gols e cartões amarelos) para o motor Poisson e executa apuração atômica.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={syncLoading}
+                  onClick={handleSincronizarProximosJogos}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-600/20 transition flex items-center gap-1.5"
+                >
+                  <DownloadCloud className={`w-3.5 h-3.5 ${syncLoading ? 'animate-bounce' : ''}`} />
+                  Próximos Jogos (14 Dias)
+                </button>
+
+                <button
+                  type="button"
+                  disabled={syncLoading}
+                  onClick={handleSincronizarHistorico}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5"
+                >
+                  <CheckCircle className={`w-3.5 h-3.5 ${syncLoading ? 'animate-spin' : ''}`} />
+                  Histórico & Apurar
+                </button>
+
+                <button
+                  type="button"
+                  disabled={syncLoading}
+                  onClick={handleSincronizarTudo}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-amber-400 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${syncLoading ? 'animate-spin' : ''}`} />
+                  Sincronizar Tudo
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Card: Agendar Nova Partida */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
             <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
@@ -293,6 +397,11 @@ export default function AdminPanel({ onMatchesUpdated }) {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-400">#{p.id}</span>
                       <span className="text-sm font-extrabold text-white">{p.descricao}</span>
+                      {p.externalId && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">
+                          ESPN #{p.externalId}
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs text-slate-400 block mt-0.5">
                       {new Date(p.inicio).toLocaleString('pt-BR')} • Status: <strong className="text-amber-400">{p.status}</strong>

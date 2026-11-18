@@ -8,14 +8,20 @@ public final class Partida {
     private final Equipe mandante;
     private final Equipe visitante;
     private final Instant inicio;
+    private final String externalId;
     private StatusPartida status;
     private ResultadoPartida resultado;
 
     public Partida(long id, Equipe mandante, Equipe visitante, Instant inicio) {
+        this(id, mandante, visitante, inicio, null);
+    }
+
+    public Partida(long id, Equipe mandante, Equipe visitante, Instant inicio, String externalId) {
         this.id = id;
         this.mandante = Objects.requireNonNull(mandante);
         this.visitante = Objects.requireNonNull(visitante);
         this.inicio = Objects.requireNonNull(inicio);
+        this.externalId = externalId != null && !externalId.isBlank() ? externalId.trim() : null;
         this.status = StatusPartida.AGENDADA;
     }
 
@@ -24,12 +30,17 @@ public final class Partida {
         this.mandante = origem.mandante;
         this.visitante = origem.visitante;
         this.inicio = origem.inicio;
+        this.externalId = origem.externalId;
         this.status = origem.status;
         this.resultado = origem.resultado;
     }
 
     public long id() {
         return id;
+    }
+
+    public String externalId() {
+        return externalId;
     }
 
     public Equipe mandante() {
@@ -70,6 +81,12 @@ public final class Partida {
 
     public void marcarEmAndamentoSeIniciou(Instant agora) {
         if (status == StatusPartida.AGENDADA && !inicio.isAfter(agora)) {
+            status = StatusPartida.EM_ANDAMENTO;
+        }
+    }
+
+    public void marcarEmAndamento() {
+        if (status == StatusPartida.AGENDADA) {
             status = StatusPartida.EM_ANDAMENTO;
         }
     }

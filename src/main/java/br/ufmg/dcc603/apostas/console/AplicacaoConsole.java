@@ -52,6 +52,7 @@ public final class AplicacaoConsole {
                 + " / " + AutenticacaoService.SENHA_ADMIN);
         br.ufmg.dcc603.apostas.web.ServidorHttp servidor = br.ufmg.dcc603.apostas.web.ServidorHttp.iniciar(sistema, 8080);
         servidor.semearDadosIniciais();
+        servidor.iniciarSincronizacaoAutomatica();
         new AplicacaoConsole(sistema, new Scanner(System.in)).executar();
     }
 

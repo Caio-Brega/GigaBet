@@ -33,13 +33,13 @@ class RelatorioServiceTest {
         assertEquals(new BigDecimal("10.00"), porPartida.valorTotal());
         assertEquals(1, porPartida.quantidadePorTipo().get(TipoPrevisao.EQUIPE_VENCEDORA));
         assertEquals(1, porPartida.quantidadePorStatus().get(StatusAposta.VENCEDORA));
-        assertEquals(new BigDecimal("27.00"), porPartida.totalPremiosPagos());
+        assertEquals(new BigDecimal("20.55"), porPartida.totalPremiosPagos());
         assertEquals("Ana Lima", porPartida.apostas().get(0).apostador());
 
         RelatorioApostador porApostador = suporte.sistema.relatorios().porApostador(suporte.admin, "529.982.247-25");
         assertEquals(1, porApostador.vencedoras());
         assertEquals(0, porApostador.abertas());
-        assertEquals(new BigDecimal("27.00"), porApostador.totalPremiosRecebidos());
+        assertEquals(new BigDecimal("20.55"), porApostador.totalPremiosRecebidos());
         assertEquals(1, porApostador.apostasPorPartida().get(partida.id()).size());
 
         assertEquals(CodigoRegra.APOSTADOR_NAO_ENCONTRADO, assertThrows(RegraNegocioException.class,

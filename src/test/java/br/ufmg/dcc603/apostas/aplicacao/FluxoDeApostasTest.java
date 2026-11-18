@@ -40,13 +40,13 @@ class FluxoDeApostasTest {
         ComprovanteAposta exato = suporte.sistema.apostas().confirmar(
                 placar, PedidoAposta.placar(atual.id(), 2, 1, new BigDecimal("10.00")));
 
-        assertEquals(new BigDecimal("99.00"), vencedor.premioPotencial());
-        assertEquals(new BigDecimal("486.00"), exato.premioPotencial());
+        assertEquals(new BigDecimal("92.72"), vencedor.premioPotencial());
+        assertEquals(new BigDecimal("103.23"), exato.premioPotencial());
         assertEquals(new BigDecimal("0.00"), suporte.sistema.autenticacao().exigirApostador(casa).saldo());
 
         suporte.encerrar(atual, 2, 1, 4);
-        assertEquals(new BigDecimal("99.00"), suporte.sistema.autenticacao().exigirApostador(casa).saldo());
-        assertEquals(new BigDecimal("486.00"), suporte.sistema.autenticacao().exigirApostador(placar).saldo());
+        assertEquals(new BigDecimal("92.72"), suporte.sistema.autenticacao().exigirApostador(casa).saldo());
+        assertEquals(new BigDecimal("103.23"), suporte.sistema.autenticacao().exigirApostador(placar).saldo());
         assertEquals(StatusAposta.VENCEDORA, suporte.sistema.apostas()
                 .consultarHistorico(casa, FiltroHistorico.nenhum()).get(0).status());
     }
@@ -139,7 +139,7 @@ class FluxoDeApostasTest {
                 () -> suporte.sistema.partidas().registrarResultado(ana, partida.id(), 1, 0, 2)).codigo());
 
         suporte.encerrar(partida, 1, 0, 2);
-        assertEquals(new BigDecimal("109.00"), suporte.sistema.autenticacao().exigirApostador(ana).saldo());
+        assertEquals(new BigDecimal("71.42"), suporte.sistema.autenticacao().exigirApostador(ana).saldo());
         assertEquals(CodigoRegra.PARTIDA_JA_ENCERRADA, assertThrows(RegraNegocioException.class,
                 () -> suporte.sistema.partidas().registrarResultado(suporte.admin, partida.id(), 0, 0, 0)).codigo());
         assertEquals(CodigoRegra.RESULTADO_INVALIDO, assertThrows(RegraNegocioException.class,
