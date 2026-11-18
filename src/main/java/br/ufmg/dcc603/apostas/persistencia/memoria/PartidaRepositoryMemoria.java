@@ -25,6 +25,17 @@ public final class PartidaRepositoryMemoria implements PartidaRepository {
     }
 
     @Override
+    public Optional<Partida> buscarPorExternalId(String externalId) {
+        if (externalId == null || externalId.isBlank()) {
+            return Optional.empty();
+        }
+        String limpo = externalId.trim();
+        return estado.partidas().values().stream()
+                .filter(p -> limpo.equals(p.externalId()))
+                .findFirst();
+    }
+
+    @Override
     public List<Partida> listar() {
         return estado.partidas().values().stream()
                 .sorted(Comparator.comparing(Partida::inicio).thenComparing(Partida::id))

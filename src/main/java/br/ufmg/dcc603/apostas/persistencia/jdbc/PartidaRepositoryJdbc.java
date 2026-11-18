@@ -35,8 +35,8 @@ public final class PartidaRepositoryJdbc implements PartidaRepository {
         banco.atualizar("""
                 INSERT INTO partidas (
                     id, mandante_id, visitante_id, inicio, status,
-                    gols_mandante, gols_visitante, cartoes_amarelos
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    gols_mandante, gols_visitante, cartoes_amarelos, external_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     mandante_id = EXCLUDED.mandante_id,
                     visitante_id = EXCLUDED.visitante_id,
@@ -44,7 +44,8 @@ public final class PartidaRepositoryJdbc implements PartidaRepository {
                     status = EXCLUDED.status,
                     gols_mandante = EXCLUDED.gols_mandante,
                     gols_visitante = EXCLUDED.gols_visitante,
-                    cartoes_amarelos = EXCLUDED.cartoes_amarelos
+                    cartoes_amarelos = EXCLUDED.cartoes_amarelos,
+                    external_id = EXCLUDED.external_id
                 """,
                 partida.id(),
                 partida.mandante().id(),
@@ -53,23 +54,36 @@ public final class PartidaRepositoryJdbc implements PartidaRepository {
                 partida.status(),
                 golsMandante,
                 golsVisitante,
-                cartoes);
+                cartoes,
+                partida.externalId());
     }
 
     @Override
     public Optional<Partida> buscarPorId(long id) {
         return banco.consultarUm("""
                 SELECT id, mandante_id, visitante_id, inicio, status,
-                       gols_mandante, gols_visitante, cartoes_amarelos
+                       gols_mandante, gols_visitante, cartoes_amarelos, external_id
                 FROM partidas WHERE id = ?
                 """, this::ler, id).map(this::montar);
+    }
+
+    @Override
+    public Optional<Partida> buscarPorExternalId(String externalId) {
+        if (externalId == null || externalId.isBlank()) {
+            return Optional.empty();
+        }
+        return banco.consultarUm("""
+                SELECT id, mandante_id, visitante_id, inicio, status,
+                       gols_mandante, gols_visitante, cartoes_amarelos, external_id
+                FROM partidas WHERE external_id = ?
+                """, this::ler, externalId.trim()).map(this::montar);
     }
 
     @Override
     public List<Partida> listar() {
         return banco.listar("""
                 SELECT id, mandante_id, visitante_id, inicio, status,
-                       gols_mandante, gols_visitante, cartoes_amarelos
+                       gols_mandante, gols_visitante, cartoes_amarelos, external_id
                 FROM partidas ORDER BY inicio, id
                 """, this::ler).stream().map(this::montar).toList();
     }
@@ -84,13 +98,15 @@ public final class PartidaRepositoryJdbc implements PartidaRepository {
             resultado = new ResultadoPartida(
                     golsMandante, linhas.getInt("gols_visitante"), linhas.getInt("cartoes_amarelos"));
         }
+        String externalId = linhas.getString("external_id");
         return new Linha(
                 linhas.getLong("id"),
                 linhas.getLong("mandante_id"),
                 linhas.getLong("visitante_id"),
                 inicio,
                 status,
-                resultado);
+                resultado,
+                externalId);
     }
 
     private Partida montar(Linha linha) {
@@ -98,7 +114,7 @@ public final class PartidaRepositoryJdbc implements PartidaRepository {
                 .orElseThrow(() -> new IllegalStateException("Mandante da partida nao encontrado"));
         Equipe visitante = equipes.buscarPorId(linha.visitanteId())
                 .orElseThrow(() -> new IllegalStateException("Visitante da partida nao encontrado"));
-        Partida partida = new Partida(linha.id(), mandante, visitante, linha.inicio());
+        Partida partida = new Partida(linha.id(), mandante, visitante, linha.inicio(), linha.externalId());
         if (linha.status() != StatusPartida.AGENDADA || linha.resultado() != null) {
             partida.restaurar(linha.status(), linha.resultado());
         }
@@ -111,6 +127,7 @@ public final class PartidaRepositoryJdbc implements PartidaRepository {
             long visitanteId,
             Instant inicio,
             StatusPartida status,
-            ResultadoPartida resultado) {
+            ResultadoPartida resultado,
+            String externalId) {
     }
 }

@@ -21,17 +21,19 @@ function MainContent() {
 
   useEffect(() => {
     carregarPartidas();
+    const atualizador = setInterval(() => carregarPartidas(false), 60_000);
+    return () => clearInterval(atualizador);
   }, []);
 
-  const carregarPartidas = async () => {
-    setLoading(true);
+  const carregarPartidas = async (mostrarLoading = true) => {
+    if (mostrarLoading) setLoading(true);
     try {
       const data = await ApiClient.listarPartidas();
       setPartidas(data || []);
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (mostrarLoading) setLoading(false);
     }
   };
 

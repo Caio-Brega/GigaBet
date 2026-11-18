@@ -28,6 +28,11 @@ export default function MatchCard({ partida, onOpenBet, onOpenResult }) {
         <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
           <Calendar className="w-3.5 h-3.5 text-slate-500" />
           <span>{dataFormatada} às {horaFormatada}</span>
+          {partida.externalId && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded">
+              ESPN
+            </span>
+          )}
         </div>
 
         <div>

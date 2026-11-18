@@ -150,4 +150,24 @@ export class ApiClient {
   static async listarAuditoria() {
     return this.request('/auditoria');
   }
+
+  // --- Sincronização ESPN (Brasileirão Série A) ---
+  static async sincronizarProximosJogos() {
+    return this.request('/sincronizacao/proximos-jogos', { method: 'POST' });
+  }
+
+  static async sincronizarHistorico(dates) {
+    return this.request('/sincronizacao/historico', {
+      method: 'POST',
+      body: JSON.stringify(dates ? { dates } : {})
+    });
+  }
+
+  static async sincronizarTudo() {
+    return this.request('/sincronizacao/tudo', { method: 'POST' });
+  }
+
+  static async statusSincronizacao() {
+    return this.request('/sincronizacao/status');
+  }
 }

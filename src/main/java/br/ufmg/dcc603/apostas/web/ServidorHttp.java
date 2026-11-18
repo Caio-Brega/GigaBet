@@ -11,6 +11,9 @@ import br.ufmg.dcc603.apostas.aplicacao.PedidoCadastro;
 import br.ufmg.dcc603.apostas.aplicacao.RegraNegocioException;
 import br.ufmg.dcc603.apostas.aplicacao.RelatorioApostador;
 import br.ufmg.dcc603.apostas.aplicacao.RelatorioPartida;
+import br.ufmg.dcc603.apostas.aplicacao.ResultadoSincronizacaoAgendadas;
+import br.ufmg.dcc603.apostas.aplicacao.ResultadoSincronizacaoCompleta;
+import br.ufmg.dcc603.apostas.aplicacao.ResultadoSincronizacaoHistorico;
 import br.ufmg.dcc603.apostas.aplicacao.ResumoApuracao;
 import br.ufmg.dcc603.apostas.aplicacao.Sessao;
 import br.ufmg.dcc603.apostas.dominio.Apostador;
@@ -35,6 +38,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,6 +47,7 @@ public final class ServidorHttp {
     private final Sistema sistema;
     private final int porta;
     private HttpServer server;
+    private ScheduledExecutorService sincronizador;
 
     public ServidorHttp(Sistema sistema, int porta) {
         this.sistema = sistema;
@@ -64,6 +70,7 @@ public final class ServidorHttp {
         }
         ServidorHttp servidor = iniciar(sistema, porta);
         servidor.semearDadosIniciais();
+        servidor.iniciarSincronizacaoAutomatica();
         System.out.println("Servidor HTTP GigaBet rodando na porta " + porta);
     }
 
@@ -83,9 +90,15 @@ public final class ServidorHttp {
         if (server != null) {
             server.stop(0);
         }
+        if (sincronizador != null) {
+            sincronizador.shutdownNow();
+        }
     }
 
     public void semearDadosIniciais() {
+        if (!Boolean.parseBoolean(System.getenv().getOrDefault("GIGABET_SEED_DEMO", "false"))) {
+            return;
+        }
         try {
             Sessao admin = sistema.autenticacao().autenticar(
                     AutenticacaoService.EMAIL_ADMIN, AutenticacaoService.SENHA_ADMIN);
@@ -93,6 +106,24 @@ public final class ServidorHttp {
         } catch (RuntimeException e) {
             System.err.println("[GigaBet API] Falha ao semear dados: " + e.getMessage());
         }
+    }
+
+    public synchronized void iniciarSincronizacaoAutomatica() {
+        if (sincronizador != null) {
+            return;
+        }
+        sincronizador = Executors.newSingleThreadScheduledExecutor(acao -> {
+            Thread thread = new Thread(acao, "gigabet-espn-sync");
+            thread.setDaemon(true);
+            return thread;
+        });
+        sincronizador.scheduleWithFixedDelay(() -> {
+            try {
+                sistema.sincronizacaoEspn().sincronizarTudo(null);
+            } catch (RuntimeException e) {
+                System.err.println("[GigaBet ESPN] Falha na sincronizacao automatica: " + e.getMessage());
+            }
+        }, 0, 1, TimeUnit.HOURS);
     }
 
     private class ApiHandler implements HttpHandler {
@@ -212,6 +243,38 @@ public final class ServidorHttp {
                     sistema.autenticacao().exigirAdministrador(sessao);
                     List<RegistroAuditoria> logs = sistema.auditoria().listar();
                     responderJson(exchange, 200, jsonAuditoria(logs));
+                } else if (path.equals("/api/sincronizacao/proximos-jogos") && method.equals("POST")) {
+                    exigirSessao(sessao);
+                    ResultadoSincronizacaoAgendadas res = sistema.sincronizacaoEspn().sincronizarProximosJogos(sessao);
+                    responderJson(exchange, 200, "{\"sucesso\":" + res.sucesso()
+                            + ",\"mensagem\":\"" + escape(res.mensagem()) + "\""
+                            + ",\"totalEventos\":" + res.totalEventos()
+                            + ",\"partidasCriadas\":" + res.partidasCriadas()
+                            + ",\"partidasJaExistentes\":" + res.partidasJaExistentes()
+                            + ",\"equipesCriadas\":" + res.equipesCriadas() + "}");
+                } else if (path.equals("/api/sincronizacao/historico") && method.equals("POST")) {
+                    exigirSessao(sessao);
+                    String dates = json != null ? json.get("dates") : null;
+                    ResultadoSincronizacaoHistorico res = sistema.sincronizacaoEspn().sincronizarHistoricoEApuracao(sessao, dates);
+                    responderJson(exchange, 200, "{\"sucesso\":" + res.sucesso()
+                            + ",\"mensagem\":\"" + escape(res.mensagem()) + "\""
+                            + ",\"totalEventos\":" + res.totalEventos()
+                            + ",\"partidasApuradas\":" + res.partidasApuradas()
+                            + ",\"apostasApuradas\":" + res.apostasApuradas()
+                            + ",\"partidasHistoricoCriadas\":" + res.partidasHistoricoCriadas()
+                            + ",\"partidasJaEncerradas\":" + res.partidasJaEncerradas()
+                            + ",\"partidasEmAndamento\":" + res.partidasEmAndamento() + "}");
+                } else if (path.equals("/api/sincronizacao/tudo") && method.equals("POST")) {
+                    exigirSessao(sessao);
+                    ResultadoSincronizacaoCompleta res = sistema.sincronizacaoEspn().sincronizarTudo(sessao);
+                    responderJson(exchange, 200, "{\"sucesso\":" + (res.agendadas().sucesso() && res.historico().sucesso())
+                            + ",\"agendadas\":{\"partidasCriadas\":" + res.agendadas().partidasCriadas()
+                            + ",\"partidasJaExistentes\":" + res.agendadas().partidasJaExistentes() + "}"
+                            + ",\"historico\":{\"partidasApuradas\":" + res.historico().partidasApuradas()
+                            + ",\"apostasApuradas\":" + res.historico().apostasApuradas()
+                            + ",\"partidasHistoricoCriadas\":" + res.historico().partidasHistoricoCriadas() + "}}");
+                } else if (path.equals("/api/sincronizacao/status") && method.equals("GET")) {
+                    responderJson(exchange, 200, "{\"provedor\":\"ESPN\",\"liga\":\"bra.1\",\"ativo\":true}");
                 } else {
                     responderJson(exchange, 404, "{\"erro\":\"Rota nao encontrada: " + path + "\"}");
                 }
@@ -288,6 +351,9 @@ public final class ServidorHttp {
             sb.append(",\"golsMandante\":").append(p.resultado().golsMandante());
             sb.append(",\"golsVisitante\":").append(p.resultado().golsVisitante());
             sb.append(",\"cartoesAmarelos\":").append(p.resultado().cartoesAmarelos());
+        }
+        if (p.externalId() != null) {
+            sb.append(",\"externalId\":\"").append(escape(p.externalId())).append("\"");
         }
         sb.append("}");
         return sb.toString();
